@@ -2,6 +2,8 @@ import re
 import csv
 import os
 import time
+import getpass
+import bcrypt
 
 class User:
     def __init__(self, email, password):
@@ -34,13 +36,13 @@ class User:
                     continue
             return email
     
-    def check_password(self) -> str:
+    def check_password(self, message: str) -> str:
         """
         Pour vérifier si un mot de passe contient au minimum un chiffre et 
         qu'il ne soit pas inférieur à 4 caractères.
         """
         while True:
-            password = input("Password : ")
+            password = getpass.getpass(message)
             regex_chiffre = re.compile(r'\d')
             if len(password) < 4:
                 print("Erreur, le mot de passe doit être minimum supérieur à 4 caractères.")
@@ -71,12 +73,12 @@ class SignUp(User):
         """
         L'inscription d'un utilisateur dans le système en POO
         """
-        name = input("Nom : ")
-        lastname = input("Prénom : ")
+        name = input("Nom : ").capitalize()
+        lastname = input("Prénom : ").capitalize()
         email = self.check_email()
         while True:
-            password = self.check_password()
-            confirm_password = self.check_password()
+            password = self.check_password("Password : ")
+            confirm_password = self.check_password("Confirmer le mot de passe : ")
             if password == confirm_password:
                 break
             else:
@@ -92,8 +94,9 @@ class SignUp(User):
         """
         Ajouter les utilisateurs inscrivent dans un fichier csv appeler 'db_users.csv'
         """
+        hashed_password = bcrypt.hashpw(self._password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         row_titles = ["Nom", "Prénom", "E-mail", "Password", "Status"]
-        row_data = [self._name, self._lastname, self._email, self._password, self._state]
+        row_data = [self._name, self._lastname, self._email, hashed_password, self._state]
         with open('db_users.csv', 'a', encoding='utf-8', newline='') as f:
             writer = csv.writer(f)
             if f.tell() == 0:
@@ -108,9 +111,9 @@ class SignIn(User):
     
     def connexion(self, users):
         email = self.check_email()
-        password = input("Saisie votre mot de passe : ")
+        password = getpass.getpass("Saisie votre mot de passe : ")
         for user in users:
-            if user['E-mail'] == email and user['Password'] == password:
+            if user['E-mail'] == email and bcrypt.checkpw(password.encode('utf-8'), user['Password'].encode('utf-8')):
                 print(f"Bienvenu(e) sur votre compte {user['Prénom']} {user['Nom']}.")
                 return
         print("Erreur, E-mail ou mot de passe incorrect.")
